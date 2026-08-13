@@ -100,6 +100,70 @@ class NiriInteractionTestCase: XCTestCase {
 }
 
 final class NiriInteractionOwnershipTests: NiriInteractionTestCase {
+    func testInteractiveMoveUsesTargetEdgesForInsertAndCenterForSwap() throws {
+        for orientation in [Monitor.Orientation.horizontal, .vertical] {
+            let engine = NiriLayoutEngine()
+            let workspaceId = WorkspaceDescriptor.ID()
+            let source = addWindow(engine, pid: 999, to: workspaceId)
+            let target = addWindow(
+                engine, pid: 999, windowId: 2, to: workspaceId, after: source
+            )
+            let frames = engine.calculateLayout(
+                state: ViewportState(),
+                workspaceId: workspaceId,
+                monitorFrame: workingFrame,
+                gaps: (horizontal: 0, vertical: 0),
+                orientation: orientation
+            )
+            let frame = try XCTUnwrap(frames[target.token])
+
+            let points = switch orientation {
+            case .horizontal: [
+                CGPoint(x: frame.midX, y: frame.minY + frame.height * 0.1),
+                frame.center,
+                CGPoint(x: frame.midX, y: frame.minY + frame.height * 0.9)
+            ]
+            case .vertical: [
+                CGPoint(x: frame.minX + frame.width * 0.1, y: frame.midY),
+                frame.center,
+                CGPoint(x: frame.minX + frame.width * 0.9, y: frame.midY)
+            ]
+            }
+
+            let positions: [InsertPosition] = try points.map { point in
+                let hoverTarget = try XCTUnwrap(
+                    engine.hitTestMoveTarget(
+                        point: point,
+                        excludingWindowId: source.id,
+                        orientation: orientation,
+                        in: workspaceId
+                    )
+                )
+                guard case let .window(_, _, position) = hoverTarget else {
+                    XCTFail("Expected a window hover target")
+                    return .swap
+                }
+                return position
+            }
+
+            XCTAssertEqual(positions, [.before, .swap, .after])
+
+            let forcedInsertTarget = try XCTUnwrap(
+                engine.hitTestMoveTarget(
+                    point: frame.center,
+                    excludingWindowId: source.id,
+                    isInsertMode: true,
+                    orientation: orientation,
+                    in: workspaceId
+                )
+            )
+            guard case let .window(_, _, forcedPosition) = forcedInsertTarget else {
+                return XCTFail("Expected a forced-insert window hover target")
+            }
+            XCTAssertEqual(forcedPosition, .after)
+        }
+    }
+
     func testInteractiveMoveUpdateAndEndRemainOwnedByStartingWorkspace() throws {
         let engine = NiriLayoutEngine()
         let workspaceA = WorkspaceDescriptor.ID()

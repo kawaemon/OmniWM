@@ -151,8 +151,9 @@ struct MouseTrackpadSettingsTab: View {
             }
 
             SettingsCaption(
-                "Hold this modifier and left-drag to swap Niri tiled windows. "
-                    + "Add Shift to insert instead; choose Off to leave modified drags to apps."
+                "Hold this modifier and left-drag a Niri tiled window. Drop on a target's center to swap, "
+                    + "or near its cross-axis edges to insert; add Shift to force insertion. "
+                    + "Choose Off to leave modified drags to apps."
             )
 
             Picker("Right Mouse Resize Modifier", selection: $settings.mouseResizeModifierKey) {

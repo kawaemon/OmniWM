@@ -165,13 +165,17 @@ extension NiriLayoutEngine {
                       let frame = window.renderedFrame ?? window.frame else { continue }
 
                 if frame.contains(point) {
+                    let (coordinate, minimum, span) = switch orientation {
+                    case .horizontal: (point.y, frame.minY, frame.height)
+                    case .vertical: (point.x, frame.minX, frame.width)
+                    }
+                    let relativePosition = (coordinate - minimum) / span
                     let position: InsertPosition = if isInsertMode {
-                        switch orientation {
-                        case .horizontal:
-                            point.y < frame.midY ? .before : .after
-                        case .vertical:
-                            point.x < frame.midX ? .before : .after
-                        }
+                        relativePosition < 0.5 ? .before : .after
+                    } else if relativePosition < 0.25 {
+                        .before
+                    } else if relativePosition > 0.75 {
+                        .after
                     } else {
                         .swap
                     }
